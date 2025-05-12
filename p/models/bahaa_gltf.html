@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLTF Model Viewer</title>
+    <style>
+        body { margin: 0; }
+        #loader {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div id="loader">Loading...</div>
+
+    <script type="module">
+        import * as THREE from "https://cdn.skypack.dev/three@0.129.0/build/three.module.js";
+        import { GLTFLoader } from "https://cdn.skypack.dev/three@0.129.0/examples/jsm/loaders/GLTFLoader.js";
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Loader
+        const loader = document.getElementById('loader');
+        loader.style.display = 'block';
+
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 1); // Soft white light
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 10, 7.5);
+        directionalLight.castShadow = true; // Enable shadows
+        scene.add(directionalLight);
+
+        const pointLight = new THREE.PointLight(0xffffff, 1, 100);
+        pointLight.position.set(0, 10, 0);
+        pointLight.castShadow = true; // Enable shadows
+        scene.add(pointLight);
+
+        const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 0.6); // Sky color, ground color, intensity
+        scene.add(hemisphereLight);
+
+        // Load GLTF models
+        const gltfLoader = new GLTFLoader();
+        const models = []; // Array to hold loaded models
+
+        // Function to load a model
+        function loadModel(url, position) {
+            return new Promise((resolve, reject) => {
+                gltfLoader.load(
+                    url,
+                    function (gltf) {
+                        const model = gltf.scene;
+                        model.scale.set(0.1, 0.1, 0.1); // Adjust scale as needed
+                        model.position.set(0, 0.9, 5); // Set position
+                        model.traverse((child) => {
+                            if (child.isMesh) {
+                                child.castShadow = true; // Enable shadows for the model
+                                child.receiveShadow = true; // Allow model to receive shadows
+                            }
+                        });
+                        scene.add(model);
+                        models.push(model); // Store the model
+                        resolve();
+                    },
+                    function (xhr) {
+                        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                    },
+                    function (error) {
+                        console.error(error);
+                        loader.innerHTML = 'Error loading model.';
+                        reject(error);
+                    }
+                );
+            });
+        }
+
+        Promise.all([
+            loadModel('html_css_js/result.gltf', new THREE.Vector3(-3, -1, 2))
+        ]).then(() => {
+            loader.style.display = 'none'; // Hide loader once models are loaded
+        });
+
+        // Camera position
+        camera.position.set(0, 1, 5);
+
+        // Movement controls
+        const keyboard = {};
+        window.addEventListener('keydown', (event) => {
+            keyboard[event.key] = true;
+        });
+        window.addEventListener('keyup', (event) => {
+            keyboard[event.key] = false;
+        });
+
+        function moveCamera() {
+            const speed = 0.1;
+            if (keyboard['w']) camera.position.z -= speed;
+            if (keyboard['s']) camera.position.z += speed;
+            if (keyboard['a']) camera.position.x -= speed;
+            if (keyboard['d']) camera.position.x += speed;
+            if (keyboard[' ']) camera.position.y += speed; // Move up with space
+            if (keyboard['Shift']) camera.position.y -= speed; // Move down with left shift
+        }
+
+        // Animation loop
+        let direction = 1; // 1 for moving right, -1 for moving left
+        const maxPosition = 3; // Right limit
+        const minPosition = -3; // Left limit
+
+        function animate() {
+            requestAnimationFrame(animate);
+            moveCamera();
+
+            models.forEach(model => {
+                if (model.position.x >= maxPosition) {
+                    direction = -1; // Change direction to left
+                } else if (model.position.x <= minPosition) {
+                    direction = 1; // Change direction to right
+                }
+
+                model.position.x += 0.01 * direction; // Move model based on direction
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+    </script>
+</body>
+</html>

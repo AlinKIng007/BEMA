@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Box Grid Viewer</title>
+    <style>
+        body { margin: 0; }
+        #loader {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div id="loader">Loading...</div>
+
+    <script type="module">
+        import * as THREE from "https://cdn.skypack.dev/three@0.129.0/build/three.module.js";
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio * 1.5);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const loader = document.getElementById('loader');
+        loader.style.display = 'block';
+
+        const ambientLight = new THREE.AmbientLight(0x404040, 1);
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0xffffff, 1, 100);
+        scene.add(pointLight);
+
+        const boxGeometry = new THREE.BoxGeometry(1, 1, 0.05);
+
+        function getGradientColor(t) {
+            // Map t to the gradient ranges
+            if (t <= 0.25) {
+                // Yellow to Red
+                return new THREE.Color(0xffff00).lerp(new THREE.Color(0xff0000), t / 0.25);
+            } else if (t <= 0.5) {
+                // Red to Blue
+                return new THREE.Color(0xff0000).lerp(new THREE.Color(0x0000ff), (t - 0.25) / 0.25);
+            } else if (t <= 0.75) {
+                // Blue to Orange
+                return new THREE.Color(0x0000ff).lerp(new THREE.Color(0xffa500), (t - 0.5) / 0.25);
+            } else {
+                // Orange to Purple
+                return new THREE.Color(0xffa500).lerp(new THREE.Color(0x800080), (t - 0.75) / 0.25);
+            }
+        }
+
+        const boxes = [];
+        const boxSpacing = 1.5; // Increase spacing between boxes
+        const boxOffset = boxSpacing; // Offset to center the boxes
+
+        function createBox() {
+            if (boxes.length < 150) {
+                const index = boxes.length; // Use the actual index for color calculation
+                const t = index / 150; // Adjust to fit your gradient over 150 boxes
+                const color = getGradientColor(t); // Generate gradient color
+                const material = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.5 });
+                const box = new THREE.Mesh(boxGeometry, material);
+                const row = Math.floor(boxes.length / 3);
+                const col = boxes.length % 3;
+                box.position.set(col * boxSpacing - boxOffset, row * boxSpacing - boxOffset, 0); // Arrange in a grid (3 rows)
+                scene.add(box);
+                boxes.push(box);
+            }
+        }
+
+        function removeBox() {
+            if (boxes.length > 0) {
+                const box = boxes.pop();
+                scene.remove(box);
+            }
+        }
+
+        // Create and remove boxes in a loop
+        let increasing = true;
+        function boxLoop() {
+            if (increasing) {
+                createBox();
+                if (boxes.length >= 150) {
+                    increasing = false; // Start decreasing when 150 is reached
+                }
+            } else {
+                removeBox();
+                if (boxes.length <= 0) {
+                    increasing = true; // Start increasing when 0 is reached
+                }
+            }
+            setTimeout(boxLoop, 50); // Faster transition speed
+        }
+
+        boxLoop(); // Start the loop
+
+        loader.style.display = 'none'; // Hide loader once boxes are added
+
+        // Camera position
+        camera.position.set(0, 35, 5);
+        camera.rotation.set(0, 0, 11);
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
