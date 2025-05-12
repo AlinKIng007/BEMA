@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take and Download Photo</title>
+    <style>
+        video {
+            width: 100%;
+            height: auto;
+        }
+        canvas {
+            display: none;
+        }
+        img {
+            width: 300px;
+        }
+        #downloadBtn {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Take a Photo and Download</h1>
+    <video id="video" autoplay></video>
+    <button id="snap">Take Photo</button>
+    <canvas id="canvas"></canvas>
+    <img id="photo" />
+    <a id="downloadBtn" style="display: none;" download="photo.png">
+        <button>Download Photo</button>
+    </a>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const photo = document.getElementById('photo');
+        const snapButton = document.getElementById('snap');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const context = canvas.getContext('2d');
+        
+        // Access the camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function(stream) {
+                video.srcObject = stream;
+            })
+            .catch(function(error) {
+                console.log("Error accessing the camera: ", error);
+            });
+        
+        // Capture photo when the button is clicked
+        snapButton.addEventListener('click', function() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert the canvas image to a data URL
+            const imageData = canvas.toDataURL('image/png');
+            photo.src = imageData;
+            photo.style.display = 'block';
+
+            // Enable the download button and set the image as the download link
+            downloadBtn.style.display = 'block';
+            downloadBtn.href = imageData;  // Set the data URL as the link's href
+        });
+    </script>
+</body>
+</html>
